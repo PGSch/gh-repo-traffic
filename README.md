@@ -89,7 +89,9 @@ Traffic Data per Repository:
 1    user/repo2           25           18        2024-10-01T00:00:00Z (25 views)
 ```
 
-![Bar Chart Example](https://user-images.githubusercontent.com/example/bar_chart.png)
+
+![bar_chart_example](https://github.com/user-attachments/assets/b5fd4347-0b65-4248-9e31-c20277de3435)
+
 
 ## Running Tests
 
