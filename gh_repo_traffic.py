@@ -1,12 +1,22 @@
 # gh_repo_traffic.py
 
 import os
+import logging
 from typing import List, Tuple, Dict, Any
 from dotenv import load_dotenv
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('gh_repo_traffic.log')
+    ]
+)
 
 def load_credentials() -> Tuple[str, str]:
     """
@@ -16,15 +26,14 @@ def load_credentials() -> Tuple[str, str]:
     -------
     Tuple[str, str]
         A tuple containing the GitHub token and username.
-
-    Examples
-    --------
-    >>> load_credentials()
-    ('ghp_xxxxxxxx', 'PGSch')
     """
     load_dotenv()
     token = os.getenv("GITHUB_TOKEN", "")
     username = os.getenv("GITHUB_USERNAME", "")
+    if not token or not username:
+        logging.error("GITHUB_TOKEN or GITHUB_USERNAME not found in .env file.")
+        raise EnvironmentError("Missing GITHUB_TOKEN or GITHUB_USERNAME in .env file.")
+    logging.info("Credentials loaded successfully.")
     return token, username
 
 
@@ -43,20 +52,18 @@ def fetch_repositories(token: str, username: str) -> List[str]:
     -------
     List[str]
         A list of repository names in the format 'username/repo_name'.
-
-    Examples
-    --------
-    >>> fetch_repositories('ghp_xxxxxxxx', 'PGSch')
-    ['PGSch/Repo1', 'PGSch/Repo2']
     """
     headers = {"Authorization": f"token {token}"}
-    repo_url = f"https://api.github.com/users/{username}/repos" # noqa: E231
-    response = requests.get(repo_url, headers=headers)
-    if response.status_code == 200:
-        return [repo["full_name"] for repo in response.json()]
-    else:
-        print(f"Failed to fetch repositories for user: {username}")
-        return []
+    repo_url = f"https://api.github.com/users/{username}/repos"
+    try:
+        response = requests.get(repo_url, headers=headers)
+        response.raise_for_status()
+        repositories = [repo["full_name"] for repo in response.json()]
+        logging.info(f"Fetched {len(repositories)} repositories for user: {username}.")
+        return repositories
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Failed to fetch repositories for user: {username}. Error: {e}")
+        raise
 
 
 def fetch_traffic_data(token: str, repos: List[str]) -> List[Dict[str, Any]]:
@@ -74,20 +81,15 @@ def fetch_traffic_data(token: str, repos: List[str]) -> List[Dict[str, Any]]:
     -------
     List[Dict[str, Any]]
         A list of dictionaries, each containing traffic data for a repository.
-
-    Examples
-    --------
-    >>> fetch_traffic_data('ghp_xxxxxxxx', ['PGSch/Repo1', 'PGSch/Repo2'])
-    [{'Repository': 'PGSch/Repo1', 'Total Views': 10, 'Unique Visitors': 5, 'View Timestamps': '2024-10-01T00:00:00Z (10 views)'}]
     """
     headers = {"Authorization": f"token {token}"}
     traffic_data = []
 
     for repo in repos:
-        traffic_url = f"https://api.github.com/repos/{repo}/traffic/views" # noqa: E231
-        traffic_response = requests.get(traffic_url, headers=headers)
-
-        if traffic_response.status_code == 200:
+        traffic_url = f"https://api.github.com/repos/{repo}/traffic/views"
+        try:
+            traffic_response = requests.get(traffic_url, headers=headers)
+            traffic_response.raise_for_status()
             repo_data = traffic_response.json()
             traffic_data.append(
                 {
@@ -97,14 +99,14 @@ def fetch_traffic_data(token: str, repos: List[str]) -> List[Dict[str, Any]]:
                     "View Timestamps": ", ".join(
                         [
                             f"{view['timestamp']} ({view['count']} views)"
-                            for view in repo_data["views"]
+                            for view in repo_data.get("views", [])
                         ]
                     ),
                 }
             )
-        else:
-            print(f"Failed to fetch traffic data for {repo}")
-
+            logging.info(f"Fetched traffic data for repository: {repo}.")
+        except requests.exceptions.RequestException as e:
+            logging.warning(f"Failed to fetch traffic data for repository: {repo}. Error: {e}")
     return traffic_data
 
 
@@ -118,20 +120,12 @@ def display_traffic_data(traffic_data: List[Dict[str, Any]], username: str) -> N
         A list of dictionaries containing traffic data for each repository.
     username : str
         GitHub username for which the traffic data is being displayed.
-
-    Returns
-    -------
-    None
-
-    Examples
-    --------
-    >>> display_traffic_data([{'Repository': 'PGSch/Repo1', 'Total Views': 10, 'Unique Visitors': 5, 'View Timestamps': '2024-10-01T00:00:00Z (10 views)'}], 'PGSch')
-    Traffic Data per Repository:
-      Repository       Total Views  Unique Visitors      View Timestamps
-    -----------------------------------------------------------------------
-      PGSch/Repo1         10            5            2024-10-01T00:00:00Z (10 views)
-    (Displays a bar chart for total views per repository.)
     """
+    if not traffic_data:
+        logging.warning("No traffic data to display.")
+        print("No traffic data available.")
+        return
+
     df = pd.DataFrame(traffic_data)
     print("Traffic Data per Repository:")
     print(df.to_string(index=False))
@@ -153,3 +147,14 @@ def display_traffic_data(traffic_data: List[Dict[str, Any]], username: str) -> N
     plt.tight_layout()
     plt.savefig("bar_chart.png")
     plt.show()
+    logging.info("Traffic data displayed and bar chart saved as 'bar_chart.png'.")
+
+
+if __name__ == "__main__":
+    try:
+        token, username = load_credentials()
+        repositories = fetch_repositories(token, username)
+        traffic_data = fetch_traffic_data(token, repositories)
+        display_traffic_data(traffic_data, username)
+    except Exception as e:
+        logging.critical(f"An error occurred: {e}")
