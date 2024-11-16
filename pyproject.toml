@@ -19,6 +19,8 @@ matplotlib = "3.7.2"        # For plotting and visualization (optional)
 scipy = "1.11.2"            # For scientific computing (optional)
 
 # Development dependencies
+packaging = "^24.2"
+rapidfuzz = "^3.10.1"
 [tool.poetry.dev-dependencies]
 flake8 = "5.0.4"            # For linting and code style checks
 black = "23.3.0"            # For code formatting
