@@ -7,6 +7,7 @@ import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 
+
 def load_credentials() -> Tuple[str, str]:
     """
     Load GitHub token and username from the .env file.
@@ -25,6 +26,7 @@ def load_credentials() -> Tuple[str, str]:
     token = os.getenv("GITHUB_TOKEN", "")
     username = os.getenv("GITHUB_USERNAME", "")
     return token, username
+
 
 def fetch_repositories(token: str, username: str) -> List[str]:
     """
@@ -48,13 +50,14 @@ def fetch_repositories(token: str, username: str) -> List[str]:
     ['PGSch/Repo1', 'PGSch/Repo2']
     """
     headers = {"Authorization": f"token {token}"}
-    repo_url = f"https://api.github.com/users/{username}/repos"
+    repo_url = f"https://api.github.com/users/{username}/repos" # noqa: E231
     response = requests.get(repo_url, headers=headers)
     if response.status_code == 200:
-        return [repo['full_name'] for repo in response.json()]
+        return [repo["full_name"] for repo in response.json()]
     else:
         print(f"Failed to fetch repositories for user: {username}")
         return []
+
 
 def fetch_traffic_data(token: str, repos: List[str]) -> List[Dict[str, Any]]:
     """
@@ -81,21 +84,29 @@ def fetch_traffic_data(token: str, repos: List[str]) -> List[Dict[str, Any]]:
     traffic_data = []
 
     for repo in repos:
-        traffic_url = f"https://api.github.com/repos/{repo}/traffic/views"
+        traffic_url = f"https://api.github.com/repos/{repo}/traffic/views" # noqa: E231
         traffic_response = requests.get(traffic_url, headers=headers)
-        
+
         if traffic_response.status_code == 200:
             repo_data = traffic_response.json()
-            traffic_data.append({
-                "Repository": repo,
-                "Total Views": repo_data["count"],
-                "Unique Visitors": repo_data["uniques"],
-                "View Timestamps": ", ".join([f"{view['timestamp']} ({view['count']} views)" for view in repo_data["views"]])
-            })
+            traffic_data.append(
+                {
+                    "Repository": repo,
+                    "Total Views": repo_data["count"],
+                    "Unique Visitors": repo_data["uniques"],
+                    "View Timestamps": ", ".join(
+                        [
+                            f"{view['timestamp']} ({view['count']} views)"
+                            for view in repo_data["views"]
+                        ]
+                    ),
+                }
+            )
         else:
             print(f"Failed to fetch traffic data for {repo}")
-    
+
     return traffic_data
+
 
 def display_traffic_data(traffic_data: List[Dict[str, Any]], username: str) -> None:
     """
@@ -127,7 +138,14 @@ def display_traffic_data(traffic_data: List[Dict[str, Any]], username: str) -> N
 
     # Plot a bar chart for total views by repository
     plt.figure(figsize=(12, 8))
-    df.plot(x="Repository", y="Total Views", kind="bar", legend=False, color="skyblue", ax=plt.gca())
+    df.plot(
+        x="Repository",
+        y="Total Views",
+        kind="bar",
+        legend=False,
+        color="skyblue",
+        ax=plt.gca(),
+    )
     plt.title(f"GitHub Traffic Views per Repository for {username}")
     plt.ylabel("Total Views")
     plt.xlabel("Repository")

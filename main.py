@@ -1,6 +1,12 @@
 # main.py
 
-from gh_repo_traffic import load_credentials, fetch_repositories, fetch_traffic_data, display_traffic_data
+from gh_repo_traffic import (
+    load_credentials,
+    fetch_repositories,
+    fetch_traffic_data,
+    display_traffic_data,
+)
+
 
 def main() -> None:
     """
@@ -10,7 +16,9 @@ def main() -> None:
     # Step 1: Load GitHub token and username from environment
     token, username = load_credentials()
     if not token or not username:
-        print("Please ensure GITHUB_TOKEN and GITHUB_USERNAME are set in the .env file.")
+        print(
+            "Please ensure GITHUB_TOKEN and GITHUB_USERNAME are set in the .env file."
+        )
         return
 
     # Step 2: Fetch repositories for the specified user
@@ -24,7 +32,7 @@ def main() -> None:
     if traffic_data:
         display_traffic_data(traffic_data, username)
 
+
 # Standard boilerplate to run the main function
 if __name__ == "__main__":
     main()
-
